@@ -5,6 +5,7 @@ definePageMeta({
 
 const data = ref([]);
 const error = ref("");
+const { get, post } = useApi();
 
 function normalizeTasks(payload) {
 	if (Array.isArray(payload?.list)) {
@@ -15,7 +16,6 @@ function normalizeTasks(payload) {
 
 async function getTasks() {
 	error.value = "";
-	const { get } = useApi();
 
 	try {
 		const response = await get("/tasks");
@@ -24,6 +24,19 @@ async function getTasks() {
 	catch {
 		error.value = "Failed to fetch tasks";
 	}
+}
+
+async function handleLogout() {
+	error.value = "";
+
+	try {
+		await post("/logout", {});
+	}
+	catch (e) {
+		console.error("Logout request failed:", e);
+	}
+
+	await navigateTo("/");
 }
 
 onMounted(() => {
@@ -40,11 +53,13 @@ onMounted(() => {
 			Welcome to the task manager page. You are successfully logged in.
 		</p>
 
-
 		<section v-if="data.length > 0">
 			<h1>Tasks List</h1>
 			<ul>
-				<li v-for="(task, index) in data" :key="task.topics_id ?? task.id ?? task.title ?? task.name ?? task.task ?? index">
+				<li
+					v-for="(task, index) in data"
+					:key="task.topics_id ?? task.id ?? task.title ?? task.name ?? task.task ?? index"
+				>
 					{{ task.subject ?? task.title ?? task.name ?? task.task ?? task.topics_id ?? task.id }}
 				</li>
 			</ul>
@@ -58,4 +73,8 @@ onMounted(() => {
 			{{ error }}
 		</p>
 	</section>
+
+	<button @click="handleLogout">
+		Logout
+	</button>
 </template>
