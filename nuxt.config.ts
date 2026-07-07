@@ -4,6 +4,11 @@ export default defineNuxtConfig({
 	devtools: { enabled: true },
 	css: ["@picocss/pico"],
 	compatibilityDate: "2025-07-15",
+	runtimeConfig: {
+		public: {
+			apiBase: "",
+		},
+	},
 	eslint: {
 		config: {
 			stylistic: {
