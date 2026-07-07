@@ -15,7 +15,7 @@ jobs:
   # for Pull Request (exclude merged)
   pullreq_build:
     name: Build(pullreq)
-    if: (github.repository == 'tsantekidis-giorgos/kuroco-font' && github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/kuroco stage') && github.event.issue.pull_request != null)
+    if: (github.repository == 'tsantekidis-giorgos/kuroco-front' && github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/kuroco stage') && github.event.issue.pull_request != null)
     runs-on: ubuntu-latest
     steps:
       - name: "Get branch name and sha"
@@ -38,28 +38,27 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18.x'
-
+          node-version: '20.x'
       - name: CI Cache
         uses: actions/cache@v4
         id: node_modules_cache_id
         env:
           cache-name: cache-node-modules
         with:
-          path: "**/node_modules"
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ steps.get_branch.outputs.branch }}-${{ hashFiles('**/package-lock.json') }}
-                      
+          path: '**/node_modules'
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ github.ref_name }}-${{ hashFiles('**/package-lock.json') }}
       - name: Install dependencies
-        if: ${{ steps.node_modules_cache_id.outputs.cache-hit != 'true' }}      
-        run: npm ci  
-      - name: Build
-        run: npm run build
+        if: ${{ steps.node_modules_cache_id.outputs.cache-hit != 'true' }}
+        run: npm ci
+
+      - name: Generate
+        run: npm run generate
       - name: Validate kuroco_front.json
         run: |
-          if [ -f "./out/kuroco_front.json" ]; then
+          if [ -f "./.output/public/kuroco_front.json" ]; then
             echo "kuroco_front.json found"
             # JSON形式の検証
-            if jq empty ./out/kuroco_front.json; then
+            if jq empty ./.output/public/kuroco_front.json; then
               echo "kuroco_front.json is valid JSON"
             else
               echo "Error: kuroco_front.json is not valid JSON"
@@ -70,13 +69,13 @@ jobs:
             exit 1
           fi
       - name: Zip artifact for upload
-        run: cd out && zip ../out.zip . -r
+        run: cd ./.output/public && zip ../../dist.zip . -r
       - name: Archive Production Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.get_branch.outputs.sha }}-${{ github.run_id }}
-          path: out.zip
-          retention-days: 7
+          path: dist.zip
+          retention-days: 1
       - name: Wait for Artifact download
         run: sleep 15
       - name: Webhook
@@ -89,7 +88,7 @@ jobs:
   #for Push
   pushed_build:
     name: Build(pushed)
-    if: (github.repository == 'tsantekidis-giorgos/kuroco-font' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch'))
+    if: (github.repository == 'tsantekidis-giorgos/kuroco-front' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -97,27 +96,27 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18.x'
-    
+          node-version: '20.x'
       - name: CI Cache
         uses: actions/cache@v4
         id: node_modules_cache_id
         env:
           cache-name: cache-node-modules
         with:
-          path: "**/node_modules"
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ env.BRANCH }}-${{ hashFiles('**/package-lock.json') }}
+          path: '**/node_modules'
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ github.ref_name }}-${{ hashFiles('**/package-lock.json') }}
       - name: Install dependencies
         if: ${{ steps.node_modules_cache_id.outputs.cache-hit != 'true' }}
         run: npm ci
-      - name: Build
-        run: npm run build
+
+      - name: Generate
+        run: npm run generate
       - name: Validate kuroco_front.json
         run: |
-          if [ -f "./out/kuroco_front.json" ]; then
+          if [ -f "./.output/public/kuroco_front.json" ]; then
             echo "kuroco_front.json found"
             # JSON形式の検証
-            if jq empty ./out/kuroco_front.json; then
+            if jq empty ./.output/public/kuroco_front.json; then
               echo "kuroco_front.json is valid JSON"
             else
               echo "Error: kuroco_front.json is not valid JSON"
@@ -128,16 +127,16 @@ jobs:
             exit 1
           fi
       - name: Zip artifact for upload
-        run: cd out && zip ../out.zip . -r
+        run: cd ./.output/public && zip ../../dist.zip . -r
       - name: Archive Production Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.sha }}-${{ github.run_id }}
-          path: out.zip
+          path: dist.zip
           retention-days: 7
       - name: Webhook
         uses: diverta/workflow-webhook@v3
         with:
           webhook_url: "https://tsantekidis-giorgos.g.kuroco.app/direct/menu/github/"
           webhook_secret: "94d4b3c844b058dc886e829b93e15898"
-          data: '{"single_zip":"1","domain":"tsantekidis-giorgos.g.kuroco-front.app","pr":"${{ github.event.issue.pull_request.url }}",  "repository":"${{ github.repository }}", "run_id":"${{ github.run_id }}", "hash":"${{ github.sha }}"}'
+          data: '{"single_zip":"1","domain":"tsantekidis-giorgos.g.kuroco-front.app", "repository":"${{ github.repository }}", "run_id":"${{ github.run_id }}", "hash":"${{ github.sha }}"}'
